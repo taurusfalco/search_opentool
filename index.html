@@ -2,15 +2,39 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Google検索タブ一括オープンツール</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google検索 一括オープン</title>
 <style>
-  body { font-family: sans-serif; padding: 20px; line-height: 1.8; }
-  textarea, input { width: 100%; box-sizing: border-box; margin-top: 4px; }
-  button { margin-top: 12px; padding: 8px 16px; }
+  body {
+    font-family: sans-serif;
+    padding: 16px;
+    line-height: 1.8;
+    max-width: 400px; /* 横幅を狭く */
+    margin: auto;
+    font-size: 18px;  /* 文字を大きく */
+  }
+  textarea, input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    font-size: 16px;
+  }
+  button {
+    margin-top: 12px;
+    padding: 10px 16px;
+    font-size: 18px;
+    width: 100%;
+  }
+  p {
+    font-size: 16px;
+  }
+  label { display: block; margin-top: 8px; }
+  a { display: block; margin: 6px 0; color: #007bff; text-decoration: underline; }
+  #timerOptions { margin-top: 10px; }
 </style>
 </head>
 <body>
-<h1>Google検索 一括オープンツール</h1>
+<h1 style="font-size:22px;">Google検索 一括オープン</h1>
 
 <label>
   基本の検索語：
@@ -19,30 +43,77 @@
 
 <label>
   リスト（改行区切り）：
-  <textarea id="list" rows="6">温泉
-焼肉
-ふるさと納税</textarea>
+  <textarea id="list" rows="6">ふるさと納税
+温泉
+焼肉</textarea>
 </label>
 
-<button id="openBtn">検索を一括で開く</button>
-<p>ポップアップブロックにより一括で開けない場合は、
-ボタンをクリックする前にサイトを「ポップアップ許可」にしてください。</P>
+<div id="timerOptions" style="display:none;">
+  間隔（スマホの場合は指定間隔ごとに開きます。）：
+  <label><input type="radio" name="interval" value="1000" checked> 1秒</label>
+  <label><input type="radio" name="interval" value="2000"> 2秒</label>
+  <label><input type="radio" name="interval" value="3000"> 3秒</label>
+</div>
+<button id="makeBtn">検索を開始</button>
+<p id="popupNote" style="display:none;">ポップアップブロックで開けない場合は、
+サイトを「ポップアップ許可」にしてからクリック</p>
+<div id="links"></div>
 
 <script>
-document.getElementById("openBtn").addEventListener("click", () => {
+function isMobile() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+// --- ページ読み込み時にスマホならタイマー選択を表示 ---
+// --- ページ読み込み時にPCならポップアップ注意を表示 ---
+window.addEventListener("DOMContentLoaded", () => {
+  if (isMobile()) {
+    document.getElementById("timerOptions").style.display = "block";
+  } else {
+    document.getElementById("popupNote").style.display = "block";
+  }
+});
+
+document.getElementById("makeBtn").addEventListener("click", () => {
   const base = document.getElementById("base").value.trim();
   const list = document.getElementById("list").value.split("\n").map(s => s.trim()).filter(Boolean);
+  const linksDiv = document.getElementById("links");
+  linksDiv.innerHTML = "";
 
   if (!base || list.length === 0) {
     alert("検索語とリストを入力してください。");
     return;
   }
 
-  list.forEach(word => {
+  const intervalElem = document.querySelector('input[name="interval"]:checked');
+  const interval = intervalElem ? Number(intervalElem.value) : 1000;
+
+  const urls = list.map(word => {
     const query = encodeURIComponent(`${base} ${word}`);
-    const url = `https://www.google.com/search?q=${query}`;
-    window.open(url, "_blank");
+    return `https://www.google.com/search?q=${query}`;
   });
+
+  // --- スマホの場合：自動でページ切り替え ---
+  if (isMobile()) {
+    let i = 0;
+    const openNext = () => {
+      if (i < urls.length) {
+        window.location.href = urls[i];
+        i++;
+        setTimeout(openNext, interval);
+      }
+    };
+    openNext();
+  } else {
+    // --- PCの場合：一括で新しいタブを開く ---
+    urls.forEach(url => {
+      window.open(url, "_blank");
+    });
+
+    const note = document.createElement("p");
+    note.textContent = "✅ すべての検索結果を新しいタブで開きました。";
+    linksDiv.appendChild(note);
+  }
 });
 </script>
 </body>
