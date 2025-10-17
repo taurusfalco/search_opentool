@@ -9,9 +9,9 @@
     font-family: sans-serif;
     padding: 16px;
     line-height: 1.8;
-    max-width: 400px; /* 横幅を狭く */
+    max-width: 400px;
     margin: auto;
-    font-size: 18px;  /* 文字を大きく */
+    font-size: 18px;
   }
   textarea, input {
     width: 100%;
@@ -25,12 +25,22 @@
     font-size: 18px;
     width: 100%;
   }
-  p {
-    font-size: 16px;
-  }
   label { display: block; margin-top: 8px; }
-  a { display: block; margin: 6px 0; color: #007bff; text-decoration: underline; }
-  #timerOptions { margin-top: 10px; }
+  a {
+    display: block;
+    margin: 6px 0;
+    color: #007bff;
+    text-decoration: underline;
+    word-break: break-word;
+  }
+  a:hover {
+    background: #ffeaa7;
+  }
+  #popupNote {
+    color: #555;
+    font-size: 14px;
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -48,15 +58,9 @@
 焼肉</textarea>
 </label>
 
-<div id="timerOptions" style="display:none;">
-  間隔（スマホの場合は指定間隔ごとに開きます。）：
-  <label><input type="radio" name="interval" value="1000" checked> 1秒</label>
-  <label><input type="radio" name="interval" value="2000"> 2秒</label>
-  <label><input type="radio" name="interval" value="3000"> 3秒</label>
-</div>
+<p id="popupNote" style="display:none;">PCではポップアップ許可が必要な場合があります。</p>
+
 <button id="makeBtn">検索を開始</button>
-<p id="popupNote" style="display:none;">ポップアップブロックで開けない場合は、
-サイトを「ポップアップ許可」にしてからクリック</p>
 <div id="links"></div>
 
 <script>
@@ -64,12 +68,8 @@ function isMobile() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-// --- ページ読み込み時にスマホならタイマー選択を表示 ---
-// --- ページ読み込み時にPCならポップアップ注意を表示 ---
 window.addEventListener("DOMContentLoaded", () => {
-  if (isMobile()) {
-    document.getElementById("timerOptions").style.display = "block";
-  } else {
+  if (!isMobile()) {
     document.getElementById("popupNote").style.display = "block";
   }
 });
@@ -85,29 +85,28 @@ document.getElementById("makeBtn").addEventListener("click", () => {
     return;
   }
 
-  const intervalElem = document.querySelector('input[name="interval"]:checked');
-  const interval = intervalElem ? Number(intervalElem.value) : 1000;
-
   const urls = list.map(word => {
     const query = encodeURIComponent(`${base} ${word}`);
-    return `https://www.google.com/search?q=${query}`;
+    return { text: `${base} ${word}`, url: `https://www.google.com/search?q=${query}` };
   });
 
-  // --- スマホの場合：自動でページ切り替え ---
   if (isMobile()) {
-    let i = 0;
-    const openNext = () => {
-      if (i < urls.length) {
-        window.location.href = urls[i];
-        i++;
-        setTimeout(openNext, interval);
-      }
-    };
-    openNext();
+    // --- スマホ：リンクを一覧で表示 ---
+    const info = document.createElement("p");
+    info.textContent = "🔍 以下のリンクをタップして検索を行ってください。";
+    linksDiv.appendChild(info);
+
+    urls.forEach((item, i) => {
+      const a = document.createElement("a");
+      a.href = item.url;
+      a.target = "_blank";
+      a.textContent = `${i + 1}. ${item.text}`;
+      linksDiv.appendChild(a);
+    });
   } else {
-    // --- PCの場合：一括で新しいタブを開く ---
-    urls.forEach(url => {
-      window.open(url, "_blank");
+    // --- PC：一括で新しいタブを開く ---
+    urls.forEach(item => {
+      window.open(item.url, "_blank");
     });
 
     const note = document.createElement("p");
